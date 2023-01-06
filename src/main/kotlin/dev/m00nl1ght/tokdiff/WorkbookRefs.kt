@@ -44,7 +44,6 @@ class WorkbookRefs constructor(val root: XSSFWorkbook) {
         greyHeaderStyle = root.createCellStyle()
         greyHeaderStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex())
         greyHeaderStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND)
-        greyHeaderStyle.setFont(headerFont)
 
         darkGreyHeaderStyle = root.createCellStyle()
         darkGreyHeaderStyle.setFillForegroundColor(IndexedColors.GREY_40_PERCENT.getIndex())

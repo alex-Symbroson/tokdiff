@@ -9,33 +9,42 @@ import org.apache.poi.ss.usermodel.*
 import org.apache.poi.xssf.usermodel.*
 import java.io.File
 import java.io.FileOutputStream
+import java.lang.Integer.max
+import java.lang.Integer.min
 import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.stream.Collectors
 import java.util.stream.IntStream
 import java.util.zip.ZipFile
 
-data class TokenChain(val source: String, val tokens: List<String>)
+data class TokenChain(val source: String, val tokens: List<String>, val include: Boolean)
 data class DiffChunk(val begins: IntArray, val ends: IntArray)
 data class DiffResults(val name: String, val inputs: List<TokenChain>, val diffs: List<DiffChunk>)
 
 fun main(args: Array<String>) {
 
-    val baseDir = File(if (args.isNotEmpty()) args[0] else "run")
-    val inputDir = File(baseDir, "input")
+    val baseDir = File(if (args.isNotEmpty()) args[0] else "run/nl")
     val outputFile = File(baseDir, "output.xlsx")
-    val zipFiles = ArrayList<ZipFile>()
+
+    val tokFiles = ArrayList<ZipFile>()
+    val inputFiles = ArrayList<ZipFile>()
 
     val workbook = WorkbookRefs(XSSFWorkbook())
     workbook.sheet = workbook.root.createSheet("Diff")
 
     try {
 
-        inputDir.listFiles()?.forEach { file ->
-            if (file.name.endsWith(".zip")) zipFiles += ZipFile(file)
+        baseDir.listFiles()?.forEach { file ->
+            if (file.name.endsWith(".zip")) {
+                if (file.name.startsWith("input")) {
+                    inputFiles += ZipFile(file)
+                } else {
+                    tokFiles += ZipFile(file)
+                }
+            }
         }
 
-        val entryNames = zipFiles.stream()
+        val entryNames = tokFiles.stream()
             .flatMap { obj -> obj.stream() }
             .map { obj -> obj.name }
             .distinct().toList()
@@ -43,7 +52,24 @@ fun main(args: Array<String>) {
         for (entryName in entryNames) {
 
             val tokenChains = ArrayList<TokenChain>()
-            for (zipFile in zipFiles) {
+            val inputEntryName = entryName.substringBeforeLast('.') + ".txt"
+
+            for (zipFile in inputFiles) {
+                try {
+                    val entry = zipFile.getEntry(inputEntryName)
+                    if (entry != null) {
+                        val instream = zipFile.getInputStream(entry)
+                        val text = String(instream.readAllBytes(), StandardCharsets.UTF_8)
+                        val tokens = applyBasicTokenizer(text)
+                        tokenChains.add(TokenChain("input", tokens, false))
+                        break
+                    }
+                } catch (e: Exception) {
+                    println("Failed to read entry $inputEntryName from ${zipFile.name}")
+                }
+            }
+
+            for (zipFile in tokFiles) {
                 try {
                     val entry = zipFile.getEntry(entryName)
                     if (entry != null) {
@@ -51,7 +77,7 @@ fun main(args: Array<String>) {
                         val text = String(instream.readAllBytes(), StandardCharsets.UTF_8)
                         val tokens = parseTokens(text)
                         val name = zipFile.name.substringAfterLast(File.separatorChar).substringBeforeLast('.')
-                        tokenChains.add(TokenChain(name, tokens))
+                        tokenChains.add(TokenChain(name, tokens, true))
                     }
                 } catch (e: Exception) {
                     println("Failed to read entry $entryName from ${zipFile.name}")
@@ -63,7 +89,8 @@ fun main(args: Array<String>) {
             writeDiffs(workbook, results)
         }
     } finally {
-        zipFiles.forEach(ZipFile::close)
+        tokFiles.forEach(ZipFile::close)
+        inputFiles.forEach(ZipFile::close)
     }
 
     val outputStream = FileOutputStream(outputFile)
@@ -72,39 +99,68 @@ fun main(args: Array<String>) {
     workbook.root.close()
 }
 
+fun applyBasicTokenizer(input: String): List<String> {
+    return input.split(' ', '\n')
+}
+
 private fun writeDiffs(workbook: WorkbookRefs, data: DiffResults) {
+    val inputIdx = data.inputs.indexOfFirst { c -> c.source == "input" }
+
     workbook.width(20).row().rowStyle = workbook.darkGreyHeaderStyle
     workbook.put(data.name, workbook.darkGreyHeaderStyle).y++
     workbook.y++
 
     workbook.mark()
 
-    workbook.put("Position", workbook.darkGreyHeaderStyle).y++
-    workbook.put("Context", workbook.darkGreyHeaderStyle).y++
+    if (inputIdx >= 0) {
+        workbook.put("Position", workbook.darkGreyHeaderStyle).y++
+        workbook.put("Context", workbook.darkGreyHeaderStyle).y++
+    }
+
     workbook.put("Category", workbook.darkGreyHeaderStyle).y++
     workbook.y++
 
     for (tokenChain in data.inputs) {
-        workbook.put(tokenChain.source, workbook.darkGreyHeaderStyle).y++
+        if (tokenChain.include) {
+            workbook.put(tokenChain.source, workbook.darkGreyHeaderStyle).y++
+        }
     }
 
     workbook.reset().x++
 
     for (diffChunk in data.diffs) {
-        workbook.width(50)
-        workbook.put("34 - 127", workbook.greyHeaderStyle).y++
-        workbook.put("---", workbook.greyHeaderStyle).y++
+
+        if (inputIdx >= 0) {
+            val chain = data.inputs[inputIdx]
+            val max = chain.tokens.size - 1
+            val begin = diffChunk.begins[inputIdx]
+            val end = max(diffChunk.ends[inputIdx], begin)
+            val beginExt = max(begin - 1, 0)
+            val endExt = min(end + 1, max)
+            val prefix = if (beginExt > 0) "[...] " else ""
+            val postfix = if (endExt < max) " [...]" else ""
+            val pstr = if (begin == end) "$begin" else "$begin - $end"
+            val context = IntStream.rangeClosed(beginExt, endExt)
+                .mapToObj { i -> chain.tokens[i] }
+                .collect(Collectors.joining(" ", prefix, postfix))
+
+            workbook.put(pstr, workbook.greyHeaderStyle).y++
+            workbook.put(context, workbook.greyHeaderStyle).y++
+        }
+
         workbook.put("Unknown", workbook.greyHeaderStyle).y++
         workbook.y++
 
         for (idx in data.inputs.indices) {
             val tokenChain = data.inputs[idx]
+            if (!tokenChain.include) continue
             val str = IntStream.rangeClosed(diffChunk.begins[idx], diffChunk.ends[idx])
                 .mapToObj { i -> tokenChain.tokens[i] }
                 .collect(Collectors.joining(" | ", "", ""))
             workbook.put(str).y++
         }
 
+        workbook.width(50)
         workbook.resetY().x++
     }
 
@@ -112,29 +168,33 @@ private fun writeDiffs(workbook: WorkbookRefs, data: DiffResults) {
 }
 
 private fun calculateDiffs(inputs: List<TokenChain>): List<DiffChunk> {
-    val diffs = ArrayList<DiffChunk>()
     val cptr = IntArray(inputs.size) // current moving index in each token chain (moves ahead)
     val bptr = IntArray(inputs.size) // index in each token chain from the end of the previous iteration
+    var mptr: IntArray? = null // marked index in each token chain (begin of current chunk)
 
-    val base = inputs[0]
+    val diffs = ArrayList<DiffChunk>()
+    val baseIdx = inputs.indices.first { i -> inputs[i].include }
+    val base = inputs[baseIdx]
+
     val ops = inputs.map { other ->
         if (other == base) emptySequence<MyersDiffOperation<String>>().iterator()
         else MyersDiffAlgorithm(base.tokens, other.tokens).generateDiff().iterator()
     }
 
-    var mptr: IntArray? = null // marked index in each token chain (begin of current chunk)
-    while (cptr[0] < base.tokens.size) {
+    while (cptr[baseIdx] < base.tokens.size) {
+
         var delta = 0
-        for (i in 1 until inputs.size) {
+        for (i in inputs.indices) {
+            if (i == baseIdx) continue
             val it = ops[i]
             while (it.hasNext()) {
                 when (it.next()) {
                     is Insert<*> -> {
-                        delta++
+                        if (inputs[i].include) delta++
                         cptr[i]++
                     }
                     is Delete -> {
-                        delta++
+                        if (inputs[i].include) delta++
                         break
                     }
                     is Skip -> {
@@ -154,7 +214,7 @@ private fun calculateDiffs(inputs: List<TokenChain>): List<DiffChunk> {
             mptr = null
         }
 
-        cptr[0]++
+        cptr[baseIdx]++
         cptr.copyInto(bptr)
     }
 
