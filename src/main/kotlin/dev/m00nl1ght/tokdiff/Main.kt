@@ -2,6 +2,7 @@
 
 package dev.m00nl1ght.tokdiff
 
+import dev.m00nl1ght.tokdiff.classifier.Category
 import dev.m00nl1ght.tokdiff.diff.MyersDiffAlgorithm
 import dev.m00nl1ght.tokdiff.diff.MyersDiffOperation
 import dev.m00nl1ght.tokdiff.diff.MyersDiffOperation.*
@@ -23,7 +24,7 @@ data class DiffResults(val name: String, val inputs: List<TokenChain>, val diffs
 
 fun main(args: Array<String>) {
 
-    val baseDir = File(if (args.isNotEmpty()) args[0] else "run/nl")
+    val baseDir = File(if (args.isNotEmpty()) args[0] else ".")
     val outputFile = File(baseDir, "output.xlsx")
 
     val tokFiles = ArrayList<ZipFile>()
@@ -93,13 +94,13 @@ fun main(args: Array<String>) {
         inputFiles.forEach(ZipFile::close)
     }
 
-    val outputStream = FileOutputStream(outputFile)
     println("Saving workbook to: ${outputFile.absolutePath}")
+    val outputStream = FileOutputStream(outputFile)
     workbook.root.write(outputStream)
     workbook.root.close()
 }
 
-fun applyBasicTokenizer(input: String): List<String> {
+private fun applyBasicTokenizer(input: String): List<String> {
     return input.split(' ', '\n')
 }
 
@@ -148,7 +149,8 @@ private fun writeDiffs(workbook: WorkbookRefs, data: DiffResults) {
             workbook.put(context, workbook.greyHeaderStyle).y++
         }
 
-        workbook.put("Unknown", workbook.greyHeaderStyle).y++
+        val category = Category.evaluate(data.inputs, diffChunk)
+        workbook.put(category.name, workbook.greyHeaderStyle).y++
         workbook.y++
 
         for (idx in data.inputs.indices) {
@@ -237,4 +239,3 @@ private fun parseTokens(input: String): List<String> {
     if (begin >= 0) throw RuntimeException("quote not closed from $begin")
     return list
 }
-
