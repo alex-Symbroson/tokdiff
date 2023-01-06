@@ -15,6 +15,8 @@ repositories {
 dependencies {
     implementation("org.apache.poi:poi:5.2.2")
     implementation("org.apache.poi:poi-ooxml:5.2.2")
+    implementation("org.apache.logging.log4j:log4j-api:2.17.2")
+    implementation("org.apache.logging.log4j:log4j-core:2.17.2")
     implementation("dev.andrewbailey.difference:difference:1.0.0")
 
     testImplementation(kotlin("test"))
