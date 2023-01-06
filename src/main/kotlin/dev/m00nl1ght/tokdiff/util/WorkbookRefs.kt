@@ -1,12 +1,11 @@
-package dev.m00nl1ght.tokdiff
+@file:OptIn(ExperimentalUnsignedTypes::class)
+
+package dev.m00nl1ght.tokdiff.util
 
 import org.apache.poi.ss.usermodel.*
 import org.apache.poi.ss.util.CellRangeAddress
 import org.apache.poi.xddf.usermodel.XDDFLineProperties
-import org.apache.poi.xssf.usermodel.XSSFClientAnchor
-import org.apache.poi.xssf.usermodel.XSSFFont
-import org.apache.poi.xssf.usermodel.XSSFSheet
-import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.apache.poi.xssf.usermodel.*
 import java.util.stream.Stream
 
 class WorkbookRefs constructor(val root: XSSFWorkbook) {
@@ -30,13 +29,16 @@ class WorkbookRefs constructor(val root: XSSFWorkbook) {
         headerFont.bold = true
 
         colorStyles = Stream.of(
-            IndexedColors.GREEN,
-            IndexedColors.LIGHT_BLUE,
-            IndexedColors.LIGHT_ORANGE,
-            IndexedColors.PLUM
+            byteArrayOf(238.toByte(), 238.toByte(), 238.toByte()),
+            byteArrayOf(144.toByte(), 202.toByte(), 249.toByte()),
+            byteArrayOf(165.toByte(), 214.toByte(), 167.toByte()),
+            byteArrayOf(230.toByte(), 238.toByte(), 156.toByte()),
+            byteArrayOf(206.toByte(), 147.toByte(), 216.toByte()),
+            byteArrayOf(239.toByte(), 154.toByte(), 154.toByte()),
+            byteArrayOf(255.toByte(), 204.toByte(), 128.toByte()),
         ).map { c ->
-            val style: CellStyle = root.createCellStyle()
-            style.fillForegroundColor = c.getIndex()
+            val style: XSSFCellStyle = root.createCellStyle()
+            style.setFillForegroundColor(XSSFColor(c))
             style.fillPattern = FillPatternType.SOLID_FOREGROUND
             style
         }.toArray{size -> arrayOfNulls<CellStyle>(size)}
@@ -118,8 +120,8 @@ class WorkbookRefs constructor(val root: XSSFWorkbook) {
         return cell != null
     }
 
-    fun colorStyleFor(idx: Int): CellStyle {
-        return if (idx < 0 || idx > colorStyles.size - 2) colorStyles[colorStyles.size - 1] else colorStyles[idx]
+    fun colorStyleFor(idx: Int): CellStyle? {
+        return if (idx < 0 || idx >= colorStyles.size) null else colorStyles[idx]
     }
 
     fun anchor(sheet: XSSFSheet, address: CellRangeAddress): XSSFClientAnchor {

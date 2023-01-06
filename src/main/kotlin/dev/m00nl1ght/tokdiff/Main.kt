@@ -1,12 +1,10 @@
-@file:Suppress("ArrayInDataClass")
-
 package dev.m00nl1ght.tokdiff
 
 import dev.m00nl1ght.tokdiff.classifier.Category
 import dev.m00nl1ght.tokdiff.diff.MyersDiffAlgorithm
 import dev.m00nl1ght.tokdiff.diff.MyersDiffOperation
 import dev.m00nl1ght.tokdiff.diff.MyersDiffOperation.*
-import org.apache.poi.ss.usermodel.*
+import dev.m00nl1ght.tokdiff.util.WorkbookRefs
 import org.apache.poi.xssf.usermodel.*
 import java.io.File
 import java.io.FileOutputStream
@@ -153,20 +151,30 @@ private fun writeDiffs(workbook: WorkbookRefs, data: DiffResults) {
         workbook.put(category.name, workbook.greyHeaderStyle).y++
         workbook.y++
 
+        val uniqueBuf = ArrayList<String>()
         for (idx in data.inputs.indices) {
             val tokenChain = data.inputs[idx]
             if (!tokenChain.include) continue
+
             val str = IntStream.rangeClosed(diffChunk.begins[idx], diffChunk.ends[idx])
                 .mapToObj { i -> tokenChain.tokens[i] }
                 .collect(Collectors.joining(" | ", "", ""))
-            workbook.put(str).y++
+
+            var uidx = uniqueBuf.indexOf(str)
+            if (uidx < 0) {
+                uidx = uniqueBuf.size
+                uniqueBuf.add(str)
+            }
+
+            val style = workbook.colorStyleFor(uidx)
+            workbook.put(str, style).y++
         }
 
         workbook.width(50)
         workbook.resetY().x++
     }
 
-    workbook.reset().y += data.inputs.size + 5
+    workbook.reset().y += data.inputs.size + 4
 }
 
 private fun calculateDiffs(inputs: List<TokenChain>): List<DiffChunk> {
