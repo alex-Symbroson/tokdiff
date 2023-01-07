@@ -4,6 +4,9 @@ import dev.m00nl1ght.tokdiff.classifier.Category
 import dev.m00nl1ght.tokdiff.diff.MyersDiffAlgorithm
 import dev.m00nl1ght.tokdiff.diff.MyersDiffOperation
 import dev.m00nl1ght.tokdiff.diff.MyersDiffOperation.*
+import dev.m00nl1ght.tokdiff.models.DiffChunk
+import dev.m00nl1ght.tokdiff.models.DiffResults
+import dev.m00nl1ght.tokdiff.models.TokenChain
 import dev.m00nl1ght.tokdiff.util.WorkbookRefs
 import org.apache.poi.xssf.usermodel.*
 import java.io.File
@@ -15,10 +18,6 @@ import java.util.*
 import java.util.stream.Collectors
 import java.util.stream.IntStream
 import java.util.zip.ZipFile
-
-data class TokenChain(val source: String, val tokens: List<String>, val include: Boolean)
-data class DiffChunk(val begins: IntArray, val ends: IntArray)
-data class DiffResults(val name: String, val inputs: List<TokenChain>, val diffs: List<DiffChunk>)
 
 fun main(args: Array<String>) {
 
@@ -147,8 +146,9 @@ private fun writeDiffs(workbook: WorkbookRefs, data: DiffResults) {
             workbook.put(context, workbook.greyHeaderStyle).y++
         }
 
-        val category = Category.evaluate(data.inputs, diffChunk)
-        workbook.put(category.name, workbook.greyHeaderStyle).y++
+        val categories = Category.evaluate(data.inputs, diffChunk)
+        val categoriesStr = categories.map { c -> c.category.name } .distinct().joinToString(", ")
+        workbook.put(categoriesStr, workbook.greyHeaderStyle).y++
         workbook.y++
 
         val uniqueBuf = ArrayList<String>()

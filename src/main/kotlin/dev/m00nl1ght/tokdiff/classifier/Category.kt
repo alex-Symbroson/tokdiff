@@ -1,84 +1,253 @@
 package dev.m00nl1ght.tokdiff.classifier
 
-import dev.m00nl1ght.tokdiff.DiffChunk
-import dev.m00nl1ght.tokdiff.TokenChain
+import dev.m00nl1ght.tokdiff.models.DiffChunk
+import dev.m00nl1ght.tokdiff.models.TokenChain
+import dev.m00nl1ght.tokdiff.models.EvaluationResult
+import kotlin.math.min
 
-open class Category(val name: String, open val sub: List<Category> = emptyList()) {
+open class Category(val name: String, open vararg val sub: Category) {
 
-    open fun tryMatch(inputs: List<TokenChain>, diff: DiffChunk): Category? {
-        return sub.firstNotNullOfOrNull { c -> c.tryMatch(inputs, diff) }
+    open fun evaluate(inputs: List<TokenChain>, diff: DiffChunk): List<EvaluationResult> {
+        return sub.map { c -> c.evaluate(inputs, diff) } .flatten()
     }
 
     companion object {
 
+        private val root = Category("root",
+            Category("separated_word",
+                SeparatedWord("separated_word_interpunct",
+                    delimeter = '·'
+                ),
+                SeparatedWord("separated_word_hyphen",
+                    delimeter = '-'
+                ),
+                SeparatedWord("separated_word_hyphen_open",
+                    delimeter = '-',
+                    minTokenCount = 2,
+                    maxTokenCount = 2
+                )
+            ),
+            Category("quoted",
+                QuotedSegment("quoted_word",
+                    quote = '"'
+                ),
+                TokenStartsWith("quoted_phrase",
+                    prefix = "\"",
+                    maxTokenCount = 10
+                )
+            ),
+            Category("paranthesis",
+                TokenStartsWith("paranthesis_start",
+                    prefix = "(",
+                    maxTokenCount = 10
+                ),
+                TokenEndsWith("paranthesis_end",
+                    postfix = ")",
+                    maxTokenCount = 10
+                )
+            ),
+            Category("date",
+                SeparatedNumber("date_full",
+                    delimeter = '.',
+                    minSegLength = 1,
+                    maxSegLength = 2,
+                    minTokenCount = 5,
+                    maxTokenCount = 5,
+                    lenientLast = true
+                ),
+                SeparatedNumber("date_partial",
+                    delimeter = '.',
+                    minSegLength = 1,
+                    maxSegLength = 2,
+                    minTokenCount = 4,
+                    maxTokenCount = 4
+                )
+            ),
+            Category("time",
+                SeparatedNumber("time_full",
+                    delimeter = ':',
+                    minSegLength = 1,
+                    maxSegLength = 2,
+                    minTokenCount = 3,
+                    maxTokenCount = 3
+                )
+            ),
+            Category("number",
+                SeparatedNumber("number_separated",
+                    delimeter = '.',
+                    minSegLength = 3,
+                    maxSegLength = 3,
+                    minTokenCount = 3,
+                    lenientFirst = true
+                ),
+                SeparatedNumber("number_decimal_fraction",
+                    delimeter = ',',
+                    minTokenCount = 3,
+                    maxTokenCount = 3
+                ),
+                SeparatedNumber("number_then_dot",
+                    delimeter = '.',
+                    minTokenCount = 2,
+                    maxTokenCount = 2
+                )
+            ),
+            Category("artefact",
+                TokenStartsWith("artefact",
+                    prefix = "&#"
+                ),
+                TokenStartsWith("artefact",
+                    prefix = "\\"
+                )
+            )
+        )
+
         private val unknown = Category("unknown")
         private val errored = Category("errored")
 
-        private val root = Category("root", listOf(
-            Category("separated_word", listOf(
-                SeparatedWord("separated_word_hyphen", '-'),
-                SeparatedWord("separated_word_interpunct", '·'),
-            )),
-            Category("quoted", listOf(
-                // TODO quoted_word -> '"text"'
-                // TODO quoted_phrase -> '"text text text"'
-            )),
-            Category("number", listOf(
-                // TODO number_separated -> '60.000.000'
-                // TODO number_decimal_fraction -> '5,9'
-                // TODO number_percent -> '67 %'
-            )),
-            Category("date", listOf(
-                // TODO date_full -> '19.05.22' '19.05.2022'
-                // TODO date_partial -> '19.05.'
-            )),
-            Category("time", listOf(
-                // TODO time_full -> '20:30'
-            )),
-            Category("artefact", listOf(
-                // TODO artefact_json_like -> '\t'
-                // TODO artefact_xml_like -> '&#9;'
-            )),
-            unknown,
-            errored
-        ))
-
-        fun evaluate(inputs: List<TokenChain>, diff: DiffChunk): Category {
-            return try {
-                root.tryMatch(inputs, diff) ?: unknown
-            } catch (e: Exception) {
-                e.printStackTrace()
-                errored
-            }
+        fun evaluate(inputs: List<TokenChain>, diff: DiffChunk): List<EvaluationResult> {
+            val results = root.evaluate(inputs, diff)
+            return results.ifEmpty { listOf(EvaluationResult(unknown, inputs[0])) }
         }
     }
 
-    class SeparatedWord(name: String, val delimeter: Char) : MatchAny(name) {
+    abstract class Base(
+        name: String,
+        val minTokenCount: Int = 1,
+        val maxTokenCount: Int = 10
+    ) : Category(name) {
 
-        override fun tryMatch(input: TokenChain, diffBegin: Int, diffEnd: Int): Category? {
-            if (diffEnd - diffBegin < 2) return null
-            for (i in diffBegin..diffEnd) {
+        override fun evaluate(inputs: List<TokenChain>, diff: DiffChunk): List<EvaluationResult> {
+            var results: MutableList<EvaluationResult>? = null
+
+            for (i in inputs.indices) {
+                val input = inputs[i]
+                if (!input.include) continue
+                val begin = diff.begins[i]
+                val end = diff.ends[i]
+                val length = end - begin + 1
+                val maxOffset = length - minTokenCount
+
+                try {
+                    var offset = 0
+                    while (offset <= maxOffset) {
+                        val oBegin = begin + offset
+                        val oEnd = min(end, oBegin + maxTokenCount - 1)
+                        if (!input.anyEvalIn(oBegin, oEnd)) {
+                            val result = tryMatch(input, oBegin, oEnd)
+                            if (result != null) {
+                                input.putEval(result)
+                                results = results ?: ArrayList()
+                                results += result
+                                offset += result.length
+                            }
+                        }
+                        offset++
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    val errored = EvaluationResult(errored, input, begin, end)
+                    return listOf(errored)
+                }
+            }
+
+            return results ?: emptyList()
+        }
+
+        abstract fun tryMatch(input: TokenChain, begin: Int, end: Int): EvaluationResult?
+    }
+
+    class SeparatedWord(
+        name: String,
+        val delimeter: Char,
+        minTokenCount: Int = 3,
+        maxTokenCount: Int = 12
+    ) : Base(name, minTokenCount, maxTokenCount) {
+
+        override fun tryMatch(input: TokenChain, begin: Int, end: Int): EvaluationResult? {
+            for (i in begin..end) {
                 val token = input.tokens[i]
 
-                if (i % 2 == diffBegin % 2) {
+                if (i % 2 == begin % 2) {
                     if (token.length > 1) continue
                 } else {
                     if (token.length == 1 && token[0] == delimeter) continue
                 }
-                return null
+                if (i - begin < minTokenCount) return null
+                return EvaluationResult(this, input, begin, i - 1)
             }
-            return this
+            return EvaluationResult(this, input, begin, end)
         }
     }
 
-    abstract class MatchAny(name: String, override val sub: List<MatchAny> = emptyList()) : Category(name, sub) {
+    class SeparatedNumber(
+        name: String,
+        val delimeter: Char,
+        minTokenCount: Int = 1,
+        maxTokenCount: Int = 10,
+        val minSegLength: Int = 1,
+        val maxSegLength: Int = 10,
+        val lenientFirst: Boolean = false,
+        val lenientLast: Boolean = false
+    ) : Base(name, minTokenCount, maxTokenCount) {
 
-        override fun tryMatch(inputs: List<TokenChain>, diff: DiffChunk): Category? {
-            return inputs.indices.firstNotNullOfOrNull { i -> tryMatch(inputs[i], diff.begins[i], diff.ends[i]) }
+        override fun tryMatch(input: TokenChain, begin: Int, end: Int): EvaluationResult? {
+            for (i in begin..end) {
+                val token = input.tokens[i]
+
+                if (i % 2 == begin % 2) {
+                    if (!token.all { char -> char.isDigit() }) return null
+                    if (token.length in minSegLength..maxSegLength
+                        || (lenientFirst && i == begin)
+                        || (lenientLast && i == end)) continue
+                } else {
+                    if (token.length == 1 && token[0] == delimeter) continue
+                }
+                if (i - begin < minTokenCount) return null
+                return EvaluationResult(this, input, begin, i - 1)
+            }
+            return EvaluationResult(this, input, begin, end)
         }
+    }
 
-        open fun tryMatch(input: TokenChain, diffBegin: Int, diffEnd: Int): Category? {
-            return sub.firstNotNullOfOrNull { c -> c.tryMatch(input, diffBegin, diffEnd) }
+    class QuotedSegment(
+        name: String,
+        val quote: Char,
+        minTokenCount: Int = 3,
+        maxTokenCount: Int = 3
+    ) : Base(name, minTokenCount, maxTokenCount) {
+
+        override fun tryMatch(input: TokenChain, begin: Int, end: Int): EvaluationResult? {
+            val b = input.tokens[begin]
+            val e = input.tokens[end]
+            if (b.length != 1 || b[0] != quote) return null
+            if (e.length != 1 || e[0] != quote) return null
+            return EvaluationResult(this, input, begin, end)
+        }
+    }
+
+    class TokenStartsWith(
+        name: String,
+        val prefix: String,
+        minTokenCount: Int = 1,
+        maxTokenCount: Int = 1
+    ) : Base(name, minTokenCount, maxTokenCount) {
+
+        override fun tryMatch(input: TokenChain, begin: Int, end: Int): EvaluationResult? {
+            if (!input.tokens[begin].startsWith(prefix)) return null
+            return EvaluationResult(this, input, begin, begin)
+        }
+    }
+
+    class TokenEndsWith(
+        name: String,
+        val postfix: String,
+        minTokenCount: Int = 1,
+        maxTokenCount: Int = 1
+    ) : Base(name, minTokenCount, maxTokenCount) {
+
+        override fun tryMatch(input: TokenChain, begin: Int, end: Int): EvaluationResult? {
+            if (!input.tokens[begin].endsWith(postfix)) return null
+            return EvaluationResult(this, input, begin, begin)
         }
     }
 }
