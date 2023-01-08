@@ -1,19 +1,29 @@
 package dev.m00nl1ght.tokdiff.classifier
 
 import dev.m00nl1ght.tokdiff.models.DiffChunk
-import dev.m00nl1ght.tokdiff.models.TokenChain
 import dev.m00nl1ght.tokdiff.models.EvaluationResult
+import dev.m00nl1ght.tokdiff.models.TokenChain
 import kotlin.math.min
 
 open class Category(val name: String, open vararg val sub: Category) {
+
+    var occurences = 0
+
+    val totalOccurences: Int
+        get() = occurences + sub.sumOf { c -> c.totalOccurences }
 
     open fun evaluate(inputs: List<TokenChain>, diff: DiffChunk): List<EvaluationResult> {
         return sub.map { c -> c.evaluate(inputs, diff) } .flatten()
     }
 
+    fun forEachCategory(depth: Int = 0, func: (category: Category, depth: Int) -> Unit) {
+        func.invoke(this, depth)
+        sub.forEach { c -> c.forEachCategory(depth + 1, func) }
+    }
+
     companion object {
 
-        private val root = Category("root",
+        val root = Category("root",
             Category("separated_word",
                 SeparatedWord("separated_word_interpunct",
                     delimeter = '·'
@@ -32,8 +42,7 @@ open class Category(val name: String, open vararg val sub: Category) {
                     quote = '"'
                 ),
                 TokenStartsWith("quoted_phrase",
-                    prefix = "\"",
-                    maxTokenCount = 10
+                    prefix = "\""
                 )
             ),
             Category("paranthesis",
@@ -92,21 +101,25 @@ open class Category(val name: String, open vararg val sub: Category) {
                 )
             ),
             Category("artefact",
-                TokenStartsWith("artefact",
+                TokenStartsWith("artefact_xml",
                     prefix = "&#"
                 ),
-                TokenStartsWith("artefact",
+                TokenStartsWith("artefact_json",
                     prefix = "\\"
                 )
             )
         )
 
-        private val unknown = Category("unknown")
-        private val errored = Category("errored")
+        val unknown = Category("unknown")
+        val errored = Category("errored")
 
         fun evaluate(inputs: List<TokenChain>, diff: DiffChunk): List<EvaluationResult> {
             val results = root.evaluate(inputs, diff)
-            return results.ifEmpty { listOf(EvaluationResult(unknown, inputs[0])) }
+            results.map { r -> r.category } .distinct().forEach { c -> c.occurences++ }
+            return results.ifEmpty {
+                unknown.occurences++
+                listOf(EvaluationResult(unknown, inputs[0]))
+            }
         }
     }
 
@@ -145,8 +158,10 @@ open class Category(val name: String, open vararg val sub: Category) {
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    val errored = EvaluationResult(errored, input, begin, end)
-                    return listOf(errored)
+                    val error = EvaluationResult(errored, input, begin, end)
+                    input.putEval(error)
+                    errored.occurences++
+                    return listOf(error)
                 }
             }
 

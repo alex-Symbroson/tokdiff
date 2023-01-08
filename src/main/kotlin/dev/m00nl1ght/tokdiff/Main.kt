@@ -8,27 +8,32 @@ import dev.m00nl1ght.tokdiff.models.DiffChunk
 import dev.m00nl1ght.tokdiff.models.DiffResults
 import dev.m00nl1ght.tokdiff.models.TokenChain
 import dev.m00nl1ght.tokdiff.util.WorkbookRefs
-import org.apache.poi.xssf.usermodel.*
+import org.apache.poi.ss.util.CellRangeAddress
+import org.apache.poi.xddf.usermodel.chart.*
+import org.apache.poi.xssf.usermodel.XSSFClientAnchor
+import org.apache.poi.xssf.usermodel.XSSFDrawing
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.openxmlformats.schemas.drawingml.x2006.chart.CTBoolean
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.Integer.max
 import java.lang.Integer.min
 import java.nio.charset.StandardCharsets
-import java.util.*
 import java.util.stream.Collectors
 import java.util.stream.IntStream
 import java.util.zip.ZipFile
 
+
 fun main(args: Array<String>) {
 
     val baseDir = File(if (args.isNotEmpty()) args[0] else ".")
+    val maxIdx = if (args.size > 1) args[1].toInt() else -1
     val outputFile = File(baseDir, "output.xlsx")
 
     val tokFiles = ArrayList<ZipFile>()
     val inputFiles = ArrayList<ZipFile>()
 
     val workbook = WorkbookRefs(XSSFWorkbook())
-    workbook.sheet = workbook.root.createSheet("Diff")
 
     try {
 
@@ -47,7 +52,14 @@ fun main(args: Array<String>) {
             .map { obj -> obj.name }
             .distinct().toList()
 
-        for (entryName in entryNames) {
+        var totalDiffs = 0
+        val writeDiffs = entryNames.size <= 2000
+
+        if (writeDiffs) {
+            workbook.sheet = workbook.root.createSheet("Diff")
+        }
+
+        for ((idx, entryName) in entryNames.withIndex()) {
 
             val tokenChains = ArrayList<TokenChain>()
             val inputEntryName = entryName.substringBeforeLast('.') + ".txt"
@@ -82,10 +94,29 @@ fun main(args: Array<String>) {
                 }
             }
 
-            val diffChunks = calculateDiffs(tokenChains)
-            val results = DiffResults(entryName, tokenChains, diffChunks)
-            writeDiffs(workbook, results)
+            try {
+                val diffChunks = calculateDiffs(tokenChains)
+                val results = DiffResults(entryName, tokenChains, diffChunks)
+                totalDiffs += diffChunks.size
+                if (writeDiffs) {
+                    writeDiffs(workbook, results)
+                } else {
+                    for (diffChunk in diffChunks) Category.evaluate(tokenChains, diffChunk)
+                }
+            } catch (e: Exception) {
+                println("Failed to calculate diffs for input $entryName")
+            }
+
+            if (maxIdx != -1 && idx > maxIdx) break
+            if (idx % 100 == 0) {
+                println("Finished input $idx of ${entryNames.size}")
+            }
         }
+
+        workbook.sheet = workbook.root.createSheet("Summary")
+        workbook.clearMark().reset()
+        writeSummary(workbook, totalDiffs)
+
     } finally {
         tokFiles.forEach(ZipFile::close)
         inputFiles.forEach(ZipFile::close)
@@ -175,6 +206,66 @@ private fun writeDiffs(workbook: WorkbookRefs, data: DiffResults) {
     }
 
     workbook.reset().y += data.inputs.size + 4
+}
+
+private fun writeSummary(workbook: WorkbookRefs, totalDiffs: Int) {
+    workbook.width(30).put("Category", workbook.darkGreyHeaderStyle).x++
+    workbook.width(20).put("Occurences", workbook.darkGreyHeaderStyle)
+    workbook.resetX().y++
+
+    Category.root.forEachCategory { category, depth ->
+        if (depth == 2) {
+            workbook.put(category.name).x++
+            workbook.put(category.totalOccurences.toDouble())
+            workbook.resetX().y++
+        }
+    }
+
+    workbook.put(Category.unknown.name).x++
+    workbook.put(Category.unknown.totalOccurences.toDouble())
+    workbook.resetX().y++
+
+    workbook.put(Category.errored.name).x++
+    workbook.put(Category.errored.totalOccurences.toDouble())
+    workbook.resetX().mark().y++
+
+    workbook.put("total occurences", workbook.greyHeaderStyle).x++
+    workbook.put(Category.root.totalOccurences.toDouble(), workbook.greyHeaderStyle)
+    workbook.resetX().y++
+    workbook.put("total diff chunks", workbook.greyHeaderStyle).x++
+    workbook.put(totalDiffs.toDouble(), workbook.greyHeaderStyle)
+    workbook.resetX().y++
+
+    val chartRect = CellRangeAddress(0, 25, 3, 13)
+    val drawing: XSSFDrawing = workbook.sheet!!.createDrawingPatriarch()
+    val anchor: XSSFClientAnchor = workbook.anchor(chartRect)
+
+    val chart = drawing.createChart(anchor)
+    chart.ctChartSpace.roundedCorners = CTBoolean.Factory.newInstance()
+    chart.ctChartSpace.roundedCorners.setVal(false)
+    chart.setTitleText("Occurences")
+    chart.titleOverlay = false
+
+    val leftAxis = chart.createValueAxis(AxisPosition.LEFT)
+    leftAxis.crossBetween = AxisCrossBetween.BETWEEN
+    leftAxis.crosses = AxisCrosses.AUTO_ZERO
+
+    val bottomAxis = chart.createCategoryAxis(AxisPosition.BOTTOM)
+
+    val sourceX = XDDFDataSourcesFactory.fromStringCellRange(workbook.sheet,
+        CellRangeAddress(1, workbook.my, 0, 0))
+
+    val sourceY = XDDFDataSourcesFactory.fromNumericCellRange(workbook.sheet,
+        CellRangeAddress(1, workbook.my, 1, 1))
+
+    val chartData = chart.createData(ChartTypes.BAR, bottomAxis, leftAxis) as XDDFBarChartData
+    chartData.barDirection = BarDirection.BAR
+
+    val series = chartData.addSeries(sourceX, sourceY) as XDDFBarChartData.Series
+    series.setTitle("Occurences", null)
+
+    chartData.setVaryColors(true)
+    chart.plot(chartData)
 }
 
 private fun calculateDiffs(inputs: List<TokenChain>): List<DiffChunk> {

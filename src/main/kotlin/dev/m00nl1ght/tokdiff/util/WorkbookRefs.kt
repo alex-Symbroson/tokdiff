@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalUnsignedTypes::class)
-
 package dev.m00nl1ght.tokdiff.util
 
 import org.apache.poi.ss.usermodel.*
@@ -71,6 +69,13 @@ class WorkbookRefs constructor(val root: XSSFWorkbook) {
         return this
     }
 
+    fun put(value: Double, style: CellStyle? = null): WorkbookRefs {
+        val cell = cell()
+        cell.setCellValue(value)
+        if (style != null) cell.cellStyle = style
+        return this
+    }
+
     fun width(width: Int): WorkbookRefs {
         sheet?.setColumnWidth(x, width * 256)
         return this
@@ -95,6 +100,12 @@ class WorkbookRefs constructor(val root: XSSFWorkbook) {
 
     fun resetY(): WorkbookRefs {
         y = my
+        return this
+    }
+
+    fun clearMark(): WorkbookRefs {
+        mx = 0
+        my = 0
         return this
     }
 
@@ -124,8 +135,8 @@ class WorkbookRefs constructor(val root: XSSFWorkbook) {
         return if (idx < 0 || idx >= colorStyles.size) null else colorStyles[idx]
     }
 
-    fun anchor(sheet: XSSFSheet, address: CellRangeAddress): XSSFClientAnchor {
-        val drawing = sheet.createDrawingPatriarch()
+    fun anchor(address: CellRangeAddress): XSSFClientAnchor {
+        val drawing = sheet!!.createDrawingPatriarch()
         return drawing.createAnchor(0, 0, 0, 0,
             address.firstColumn, address.firstRow, address.lastColumn, address.lastRow)
     }
