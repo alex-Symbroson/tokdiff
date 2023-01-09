@@ -28,12 +28,13 @@ fun main(args: Array<String>) {
 
     val baseDir = File(if (args.isNotEmpty()) args[0] else ".")
     val maxIdx = if (args.size > 1) args[1].toInt() else -1
-    val outputFile = File(baseDir, "output.xlsx")
+    val writeDiffs = if (args.size > 2) args[2].toBoolean() else true
 
     val tokFiles = ArrayList<ZipFile>()
     val inputFiles = ArrayList<ZipFile>()
 
-    val workbook = WorkbookRefs(XSSFWorkbook())
+    var workbook = WorkbookRefs(XSSFWorkbook())
+    var outputFileNumber = 0
 
     try {
 
@@ -53,7 +54,6 @@ fun main(args: Array<String>) {
             .distinct().toList()
 
         var totalDiffs = 0
-        val writeDiffs = entryNames.size <= 2000
 
         if (writeDiffs) {
             workbook.sheet = workbook.root.createSheet("Diff")
@@ -111,25 +111,40 @@ fun main(args: Array<String>) {
             if (idx % 100 == 0) {
                 println("Finished input $idx of ${entryNames.size}")
             }
+
+            if ((idx + 1) % 1000 == 0 && writeDiffs) {
+                saveWorkbook(workbook, baseDir, "diffs", outputFileNumber)
+                println("Finished processing input $idx, starting new output file")
+                workbook = WorkbookRefs(XSSFWorkbook())
+                workbook.sheet = workbook.root.createSheet("Diff")
+                outputFileNumber++
+            }
         }
 
+        saveWorkbook(workbook, baseDir, "diffs", outputFileNumber)
+        println("Finished processing all inputs, starting summary output file")
+
+        workbook = WorkbookRefs(XSSFWorkbook())
         workbook.sheet = workbook.root.createSheet("Summary")
-        workbook.clearMark().reset()
         writeSummary(workbook, totalDiffs)
+        saveWorkbook(workbook, baseDir, "summary", -1)
 
     } finally {
         tokFiles.forEach(ZipFile::close)
         inputFiles.forEach(ZipFile::close)
     }
-
-    println("Saving workbook to: ${outputFile.absolutePath}")
-    val outputStream = FileOutputStream(outputFile)
-    workbook.root.write(outputStream)
-    workbook.root.close()
 }
 
 private fun applyBasicTokenizer(input: String): List<String> {
     return input.split(' ', '\n')
+}
+
+private fun saveWorkbook(workbook: WorkbookRefs, baseDir: File, baseName: String, number: Int) {
+    val outputFile = File(baseDir, if (number >= 0) "$baseName-$number.xlsx" else "$baseName.xlsx")
+    println("Saving workbook to: ${outputFile.absolutePath}")
+    val outputStream = FileOutputStream(outputFile)
+    workbook.root.write(outputStream)
+    workbook.root.close()
 }
 
 private fun writeDiffs(workbook: WorkbookRefs, data: DiffResults) {
