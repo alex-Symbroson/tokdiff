@@ -1,8 +1,7 @@
 package dev.m00nl1ght.tokdiff.classifier
 
-import dev.m00nl1ght.tokdiff.models.DiffChunk
-import dev.m00nl1ght.tokdiff.models.EvaluationResult
-import dev.m00nl1ght.tokdiff.models.TokenChain
+import dev.m00nl1ght.tokdiff.DiffChunk
+import dev.m00nl1ght.tokdiff.TokenChain
 import kotlin.math.min
 
 open class Category(val name: String, open vararg val sub: Category) {
@@ -19,108 +18,6 @@ open class Category(val name: String, open vararg val sub: Category) {
     fun forEachCategory(depth: Int = 0, func: (category: Category, depth: Int) -> Unit) {
         func.invoke(this, depth)
         sub.forEach { c -> c.forEachCategory(depth + 1, func) }
-    }
-
-    companion object {
-
-        val root = Category("root",
-            Category("separated_word",
-                SeparatedWord("separated_word_interpunct",
-                    delimeter = '·'
-                ),
-                SeparatedWord("separated_word_hyphen",
-                    delimeter = '-'
-                ),
-                SeparatedWord("separated_word_hyphen_open",
-                    delimeter = '-',
-                    minTokenCount = 2,
-                    maxTokenCount = 2
-                )
-            ),
-            Category("quoted",
-                QuotedSegment("quoted_word",
-                    quote = '"'
-                ),
-                TokenStartsWith("quoted_phrase",
-                    prefix = "\""
-                )
-            ),
-            Category("paranthesis",
-                TokenStartsWith("paranthesis_start",
-                    prefix = "(",
-                    maxTokenCount = 10
-                ),
-                TokenEndsWith("paranthesis_end",
-                    postfix = ")",
-                    maxTokenCount = 10
-                )
-            ),
-            Category("date",
-                SeparatedNumber("date_full",
-                    delimeter = '.',
-                    minSegLength = 1,
-                    maxSegLength = 2,
-                    minTokenCount = 5,
-                    maxTokenCount = 5,
-                    lenientLast = true
-                ),
-                SeparatedNumber("date_partial",
-                    delimeter = '.',
-                    minSegLength = 1,
-                    maxSegLength = 2,
-                    minTokenCount = 4,
-                    maxTokenCount = 4
-                )
-            ),
-            Category("time",
-                SeparatedNumber("time_full",
-                    delimeter = ':',
-                    minSegLength = 1,
-                    maxSegLength = 2,
-                    minTokenCount = 3,
-                    maxTokenCount = 3
-                )
-            ),
-            Category("number",
-                SeparatedNumber("number_separated",
-                    delimeter = '.',
-                    minSegLength = 3,
-                    maxSegLength = 3,
-                    minTokenCount = 3,
-                    lenientFirst = true
-                ),
-                SeparatedNumber("number_decimal_fraction",
-                    delimeter = ',',
-                    minTokenCount = 3,
-                    maxTokenCount = 3
-                ),
-                SeparatedNumber("number_then_dot",
-                    delimeter = '.',
-                    minTokenCount = 2,
-                    maxTokenCount = 2
-                )
-            ),
-            Category("artefact",
-                TokenStartsWith("artefact_xml",
-                    prefix = "&#"
-                ),
-                TokenStartsWith("artefact_json",
-                    prefix = "\\"
-                )
-            )
-        )
-
-        val unknown = Category("unknown")
-        val errored = Category("errored")
-
-        fun evaluate(inputs: List<TokenChain>, diff: DiffChunk): List<EvaluationResult> {
-            val results = root.evaluate(inputs, diff)
-            results.map { r -> r.category } .distinct().forEach { c -> c.occurences++ }
-            return results.ifEmpty {
-                unknown.occurences++
-                listOf(EvaluationResult(unknown, inputs[0]))
-            }
-        }
     }
 
     abstract class Base(
@@ -145,12 +42,9 @@ open class Category(val name: String, open vararg val sub: Category) {
                     while (offset <= maxOffset) {
                         val oBegin = begin + offset
                         val oEnd = min(end, oBegin + maxTokenCount - 1)
-                        val oFirstDone = input.firstEvalIn(oBegin, oEnd)
-                        val oEndCapped = if (oFirstDone < 0) oEnd else (oFirstDone - 1)
-                        if (oEndCapped >= oBegin) {
+                        if (oEnd >= oBegin) {
                             val result = tryMatch(input, oBegin, oEnd)
                             if (result != null) {
-                                input.putEval(result)
                                 results = results ?: ArrayList()
                                 results += result
                                 offset += result.length
@@ -160,10 +54,7 @@ open class Category(val name: String, open vararg val sub: Category) {
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    val error = EvaluationResult(errored, input, begin, end)
-                    input.putEval(error)
-                    errored.occurences++
-                    return listOf(error)
+                    return emptyList()
                 }
             }
 

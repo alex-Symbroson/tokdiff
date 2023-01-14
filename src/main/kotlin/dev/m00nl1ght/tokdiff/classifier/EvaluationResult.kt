@@ -1,6 +1,6 @@
-package dev.m00nl1ght.tokdiff.models
+package dev.m00nl1ght.tokdiff.classifier
 
-import dev.m00nl1ght.tokdiff.classifier.Category
+import dev.m00nl1ght.tokdiff.TokenChain
 import kotlin.math.max
 
 data class EvaluationResult(

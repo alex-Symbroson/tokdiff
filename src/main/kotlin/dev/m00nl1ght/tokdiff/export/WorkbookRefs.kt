@@ -1,4 +1,4 @@
-package dev.m00nl1ght.tokdiff.util
+package dev.m00nl1ght.tokdiff.export
 
 import org.apache.poi.ss.usermodel.*
 import org.apache.poi.ss.util.CellRangeAddress
