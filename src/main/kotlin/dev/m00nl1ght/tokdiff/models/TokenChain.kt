@@ -4,9 +4,9 @@ class TokenChain(val source: String, val tokens: List<String>, val include: Bool
 
     val eval: Array<EvaluationResult?> = arrayOfNulls(tokens.size)
 
-    fun anyEvalIn(begin: Int, end: Int): Boolean {
-        for (i in begin..end) if (eval[i] != null) return true
-        return false
+    fun firstEvalIn(begin: Int, end: Int): Int {
+        for (i in begin..end) if (eval[i] != null) return i
+        return -1
     }
 
     fun putEval(result: EvaluationResult) {

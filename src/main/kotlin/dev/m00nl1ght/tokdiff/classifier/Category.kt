@@ -145,7 +145,9 @@ open class Category(val name: String, open vararg val sub: Category) {
                     while (offset <= maxOffset) {
                         val oBegin = begin + offset
                         val oEnd = min(end, oBegin + maxTokenCount - 1)
-                        if (!input.anyEvalIn(oBegin, oEnd)) {
+                        val oFirstDone = input.firstEvalIn(oBegin, oEnd)
+                        val oEndCapped = if (oFirstDone < 0) oEnd else (oFirstDone - 1)
+                        if (oEndCapped >= oBegin) {
                             val result = tryMatch(input, oBegin, oEnd)
                             if (result != null) {
                                 input.putEval(result)
