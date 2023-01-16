@@ -36,8 +36,8 @@ fun main(args: Array<String>) {
             }
         }
 
-        val entryNames = tokFiles.stream()
-            .flatMap { obj -> obj.stream() }
+        val entryNames = tokFiles
+            .flatMap { obj -> obj.entries().asSequence() }
             .map { obj -> obj.name }
             .distinct().toList()
 
