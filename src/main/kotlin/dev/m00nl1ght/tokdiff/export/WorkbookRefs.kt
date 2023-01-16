@@ -4,12 +4,11 @@ import org.apache.poi.ss.usermodel.*
 import org.apache.poi.ss.util.CellRangeAddress
 import org.apache.poi.xddf.usermodel.XDDFLineProperties
 import org.apache.poi.xssf.usermodel.*
-import java.util.stream.Stream
 
 class WorkbookRefs constructor(val root: XSSFWorkbook) {
 
     val headerFont: XSSFFont
-    val colorStyles: Array<CellStyle>
+    val colorStyles: List<CellStyle>
     val greyHeaderStyle: CellStyle
     val darkGreyHeaderStyle: CellStyle
     val numericFormat: DataFormat
@@ -26,7 +25,7 @@ class WorkbookRefs constructor(val root: XSSFWorkbook) {
         headerFont = root.createFont()
         headerFont.bold = true
 
-        colorStyles = Stream.of(
+        colorStyles = sequenceOf(
             byteArrayOf(238.toByte(), 238.toByte(), 238.toByte()),
             byteArrayOf(144.toByte(), 202.toByte(), 249.toByte()),
             byteArrayOf(165.toByte(), 214.toByte(), 167.toByte()),
@@ -39,7 +38,7 @@ class WorkbookRefs constructor(val root: XSSFWorkbook) {
             style.setFillForegroundColor(XSSFColor(c))
             style.fillPattern = FillPatternType.SOLID_FOREGROUND
             style
-        }.toArray{size -> arrayOfNulls<CellStyle>(size)}
+        }.toList()
 
         greyHeaderStyle = root.createCellStyle()
         greyHeaderStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex())

@@ -11,8 +11,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.openxmlformats.schemas.drawingml.x2006.chart.CTBoolean
 import java.io.File
 import java.io.FileOutputStream
-import java.util.stream.Collectors
-import java.util.stream.IntStream
 
 class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) {
 
@@ -65,9 +63,8 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
                 val prefix = if (beginExt > 0) "[...] " else ""
                 val postfix = if (endExt < max) " [...]" else ""
                 val pstr = if (begin == end) "$begin" else "$begin - $end"
-                val context = IntStream.rangeClosed(beginExt, endExt)
-                    .mapToObj { i -> chain.tokens[i] }
-                    .collect(Collectors.joining(" ", prefix, postfix))
+                val context = IntRange(beginExt, endExt)
+                    .joinToString(" ", prefix, postfix) { i -> chain.tokens[i] }
 
                 workbook.put(pstr, workbook.greyHeaderStyle).x++
                 workbook.cell().cellStyle = workbook.greyHeaderStyle
@@ -90,9 +87,8 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
                 if (!input.include) continue
 
                 val chunk = result.chunks[i]
-                val str = IntStream.rangeClosed(chunk.begin, chunk.end)
-                    .mapToObj { t -> input.tokens[t] }
-                    .collect(Collectors.joining(" | ", "", ""))
+                val str = IntRange(chunk.begin, chunk.end)
+                    .joinToString(" | ", "", "") { t -> input.tokens[t] }
 
                 var uidx = uniqueBuf.indexOf(str)
                 if (uidx < 0) {
