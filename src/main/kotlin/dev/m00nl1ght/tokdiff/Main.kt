@@ -79,13 +79,10 @@ fun main(args: Array<String>) {
             try {
                 val diffChunks = calculateDiffs(tokenChains)
                 totalDiffs += diffChunks.size
-                if (writeDiffs) {
-                    workbookWriter.writeDiffs(entryName, tokenChains, diffChunks)
-                } else {
-                    for (diffChunk in diffChunks) Classifier.evaluate(tokenChains, diffChunk)
-                }
+                val results = diffChunks.map { c -> Classifier.evaluate(tokenChains, c) } .flatten().toList()
+                if (writeDiffs) workbookWriter.writeDiffs(entryName, tokenChains, results)
             } catch (e: Exception) {
-                println("Failed to calculate diffs for input $entryName")
+                println("Failed to process diffs for input $entryName")
             }
 
             if (maxIdx != -1 && idx > maxIdx) break

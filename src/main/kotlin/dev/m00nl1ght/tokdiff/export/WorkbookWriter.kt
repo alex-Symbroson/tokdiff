@@ -1,8 +1,8 @@
 package dev.m00nl1ght.tokdiff.export
 
 import dev.m00nl1ght.tokdiff.classifier.Classifier
-import dev.m00nl1ght.tokdiff.DiffChunk
 import dev.m00nl1ght.tokdiff.TokenChain
+import dev.m00nl1ght.tokdiff.classifier.ClassifierResult
 import org.apache.poi.ss.util.CellRangeAddress
 import org.apache.poi.xddf.usermodel.chart.*
 import org.apache.poi.xssf.usermodel.XSSFClientAnchor
@@ -28,7 +28,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
         workbook.sheet = workbook.root.createSheet(name)
     }
 
-    fun writeDiffs(name: String, inputs: List<TokenChain>, diffs: List<DiffChunk>) {
+    fun writeDiffs(name: String, inputs: List<TokenChain>, results: List<ClassifierResult>) {
         val inputIdx = inputs.indexOfFirst { c -> c.name == "input" }
 
         workbook.width(20).row().rowStyle = workbook.darkGreyHeaderStyle
@@ -53,13 +53,13 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
 
         workbook.reset().x++
 
-        for (diffChunk in diffs) {
+        for (result in results) {
 
             if (inputIdx >= 0) {
                 val chain = inputs[inputIdx]
                 val max = chain.tokens.size - 1
-                val begin = diffChunk.begins[inputIdx]
-                val end = Integer.max(diffChunk.ends[inputIdx], begin)
+                val begin = result.chunks[inputIdx].begin
+                val end = Integer.max(result.chunks[inputIdx].end, begin)
                 val beginExt = Integer.max(begin - 1, 0)
                 val endExt = Integer.min(end + 1, max)
                 val prefix = if (beginExt > 0) "[...] " else ""
@@ -73,18 +73,16 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
                 workbook.put(context, workbook.greyHeaderStyle).y++
             }
 
-            val categories = Classifier.evaluate(inputs, diffChunk)
-            val categoriesStr = categories.map { c -> c.category.name } .distinct().joinToString(", ")
-            workbook.put(categoriesStr, workbook.greyHeaderStyle).y++
+            workbook.put(result.category.name, workbook.greyHeaderStyle).y++
             workbook.y++
 
             val uniqueBuf = ArrayList<String>()
-            for (idx in inputs.indices) {
-                val tokenChain = inputs[idx]
-                if (!tokenChain.include) continue
+            for ((i, input) in inputs.withIndex()) {
+                if (!input.include) continue
 
-                val str = IntStream.rangeClosed(diffChunk.begins[idx], diffChunk.ends[idx])
-                    .mapToObj { i -> tokenChain.tokens[i] }
+                val chunk = result.chunks[i]
+                val str = IntStream.rangeClosed(chunk.begin, chunk.end)
+                    .mapToObj { t -> input.tokens[t] }
                     .collect(Collectors.joining(" | ", "", ""))
 
                 var uidx = uniqueBuf.indexOf(str)
@@ -119,10 +117,6 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
 
         workbook.put(Classifier.unknown.name).x++
         workbook.put(Classifier.unknown.totalOccurences.toDouble())
-        workbook.resetX().y++
-
-        workbook.put(Classifier.errored.name).x++
-        workbook.put(Classifier.errored.totalOccurences.toDouble())
         workbook.resetX().mark().y++
 
         workbook.put("total occurences", workbook.greyHeaderStyle).x++
