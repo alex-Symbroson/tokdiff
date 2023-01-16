@@ -29,7 +29,6 @@ class CategoryByRegex(name: String, vararg val behaviours: BehaviourByRegex) : C
 
             for (b in behaviours) {
                 var combPos = 0
-                var consumedTokens = 0
 
                 if (segments.isNotEmpty()) segments = LinkedList<String>()
 
@@ -38,7 +37,6 @@ class CategoryByRegex(name: String, vararg val behaviours: BehaviourByRegex) : C
                     if (!matcher.lookingAt()) continue
                     for (g in 1..matcher.groupCount()) segments.add(matcher.group(g))
                     combPos = matcher.end()
-                    consumedTokens += b.baseTokenCount
                 }
 
                 if (b.repeatingPattern != null) {
@@ -48,14 +46,20 @@ class CategoryByRegex(name: String, vararg val behaviours: BehaviourByRegex) : C
                         if (!matcher.lookingAt()) break
                         for (g in 1..matcher.groupCount()) segments.add(matcher.group(g))
                         combPos = matcher.end()
-                        consumedTokens += b.repeatingTokenCount
                     }
                 }
 
-                // don't accept chunks that end in the middle of a token
-                if (combPos != 0 && combPos != combStr.length && combStr[combPos] != '~') continue
+                val end = when (combPos) {
+                    0 -> dBegin - 1
+                    combStr.length -> dEnd
+                    else -> {
+                        if (combStr[combPos] != '~') continue
+                        val occ = IntRange(0, combPos - 1).map { p -> combStr[p] }.filter { c -> c == '~' }.size
+                        dBegin + occ
+                    }
+                }
 
-                chunks.add(Chunk(input, b, segments, dBegin, dBegin + consumedTokens - 1))
+                chunks.add(Chunk(input, b, segments, dBegin, end))
                 continue@itinputs
             }
 
@@ -68,12 +72,17 @@ class CategoryByRegex(name: String, vararg val behaviours: BehaviourByRegex) : C
 
         val initiator = chunks.firstOrNull { c -> c.value is BehaviourByRegex && c.value.initiator } ?: return null
 
-        for (c in chunks) {
-            if (c.value is BehaviourByRegex && c.value.initiator) {
-                if (c.segments.size != initiator.segments.size) return null
-            } else {
-                if (c.value == Classifier.unidentified) continue
-                if (c.segments.size < initiator.segments.size) return null
+        for ((i, c) in chunks.withIndex()) {
+            if (c.value is BehaviourByRegex) {
+                if (c.value.initiator) {
+                    if (c.segments.size != initiator.segments.size) return null
+                } else {
+                    if (c.segments.size < initiator.segments.size) return null
+                    val limit = c.value.tokenLimit(initiator.segments.size)
+                    if (limit >= 0 && c.length > limit) {
+                        chunks[i] = Chunk(c.input, c.value, c.segments.subList(0, limit), c.begin, c.begin + limit - 1)
+                    }
+                }
             }
         }
 

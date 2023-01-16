@@ -41,6 +41,7 @@ class Classifier {
                         BehaviourByRegex("consumed", -1f,
                             basePattern = "($wordnum)~($word)",
                             repeatingPattern = "~($word)",
+                            tokenLimit = { s -> s },
                             initiator = false
                         )
                     ),
@@ -57,7 +58,7 @@ class Classifier {
                 ),
                 Category("quoted",
                     CategoryByRegex("quoted_word",
-                        BehaviourByRegex("separate", 1f,
+                        BehaviourByRegex("separated", 1f,
                             basePattern = "\"~($any)~\""
                         ),
                         BehaviourByRegex("dangling", -1f,
@@ -68,7 +69,7 @@ class Classifier {
                         )
                     ),
                     CategoryByRegex("quoted_phrase_start",
-                        BehaviourByRegex("separate", 1f,
+                        BehaviourByRegex("separated", 1f,
                             basePattern = "\"~($any)"
                         ),
                         BehaviourByRegex("dangling", -1f,
@@ -79,7 +80,7 @@ class Classifier {
                         )
                     ),
                     CategoryByRegex("quoted_phrase_end",
-                        BehaviourByRegex("separate", 1f,
+                        BehaviourByRegex("separated", 1f,
                             basePattern = "($any)~\""
                         ),
                         BehaviourByRegex("dangling", -1f,
@@ -92,7 +93,7 @@ class Classifier {
                 ),
                 Category("paranthesis",
                     CategoryByRegex("parenthesized_word",
-                        BehaviourByRegex("separate", 1f,
+                        BehaviourByRegex("separated", 1f,
                             basePattern = "\\(~($any)~\\)"
                         ),
                         BehaviourByRegex("dangling", -1f,
@@ -100,7 +101,7 @@ class Classifier {
                         )
                     ),
                     CategoryByRegex("parenthesized_phrase_start",
-                        BehaviourByRegex("separate", 1f,
+                        BehaviourByRegex("separated", 1f,
                             basePattern = "\\(~($any)"
                         ),
                         BehaviourByRegex("dangling", -1f,
@@ -108,7 +109,7 @@ class Classifier {
                         )
                     ),
                     CategoryByRegex("parenthesized_phrase_end",
-                        BehaviourByRegex("separate", 1f,
+                        BehaviourByRegex("separated", 1f,
                             basePattern = "($any)~\\)"
                         ),
                         BehaviourByRegex("dangling", -1f,
@@ -121,7 +122,7 @@ class Classifier {
                         BehaviourByRegex("kept", 1f,
                             basePattern = "([0-9]{1,2})\\.([0-9]{1,2})\\.([0-9]{2,4})"
                         ),
-                        BehaviourByRegex("separate", -1f,
+                        BehaviourByRegex("split", -1f,
                             basePattern = "([0-9]{1,2})~\\.~([0-9]{1,2})~\\.~([0-9]{2,4})"
                         ),
                         BehaviourByRegex("dangling_pre", -1f,
@@ -135,7 +136,7 @@ class Classifier {
                         BehaviourByRegex("kept", 1f,
                             basePattern = "([0-9]{1,2})\\.([0-9]{1,2})\\."
                         ),
-                        BehaviourByRegex("separate", -1f,
+                        BehaviourByRegex("split", -1f,
                             basePattern = "([0-9]{1,2})~\\.~([0-9]{1,2})~\\."
                         ),
                         BehaviourByRegex("dangling_pre", -1f,
@@ -151,7 +152,7 @@ class Classifier {
                         BehaviourByRegex("kept", 1f,
                             basePattern = "([0-9]{1,2}):([0-9]{2})"
                         ),
-                        BehaviourByRegex("separate", -1f,
+                        BehaviourByRegex("split", -1f,
                             basePattern = "([0-9]{1,2})~:~([0-9]{2})"
                         ),
                         BehaviourByRegex("dangling_pre", -1f,
@@ -248,6 +249,7 @@ class Classifier {
                 }
             }
 
+            results.forEach { r -> r.category.occurences++ }
             return results
         }
     }

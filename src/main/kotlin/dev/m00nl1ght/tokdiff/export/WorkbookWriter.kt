@@ -69,12 +69,21 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
                     .mapToObj { i -> chain.tokens[i] }
                     .collect(Collectors.joining(" ", prefix, postfix))
 
-                workbook.put(pstr, workbook.greyHeaderStyle).y++
-                workbook.put(context, workbook.greyHeaderStyle).y++
+                workbook.put(pstr, workbook.greyHeaderStyle).x++
+                workbook.cell().cellStyle = workbook.greyHeaderStyle
+                workbook.x--
+                workbook.y++
+
+                workbook.put(context, workbook.greyHeaderStyle).x++
+                workbook.cell().cellStyle = workbook.greyHeaderStyle
+                workbook.x--
+                workbook.y++
             }
 
-            workbook.put(result.category.name, workbook.greyHeaderStyle).y++
-            workbook.y++
+            workbook.put(result.category.name, workbook.greyHeaderStyle).x++
+            workbook.cell().cellStyle = workbook.greyHeaderStyle
+            workbook.x--
+            workbook.y += 2
 
             val uniqueBuf = ArrayList<String>()
             for ((i, input) in inputs.withIndex()) {
@@ -92,11 +101,14 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
                 }
 
                 val style = workbook.colorStyleFor(uidx)
-                workbook.put(str, style).y++
+                workbook.put(str, style).x++
+                workbook.put("[" + chunk.value.name + "]", style).y++
+                workbook.x--
             }
 
-            workbook.width(50)
-            workbook.resetY().x++
+            workbook.width(40).x++
+            workbook.width(15).x++
+            workbook.resetY()
         }
 
         workbook.reset().y += inputs.size + 4

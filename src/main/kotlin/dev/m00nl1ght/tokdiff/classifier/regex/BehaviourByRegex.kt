@@ -8,10 +8,9 @@ class BehaviourByRegex(
     score: Float,
     basePattern: String? = null,
     repeatingPattern: String? = null,
-    val initiator: Boolean = true
+    val initiator: Boolean = true,
+    val tokenLimit: (segmentCount: Int) -> Int = { _ -> -1 }
 ) : Behaviour(name, score) {
     val basePattern: Pattern? = if (basePattern == null) null else Pattern.compile(basePattern)
-    val baseTokenCount = 1 + (basePattern?.count { c -> c == '~' } ?: -1)
     val repeatingPattern: Pattern? = if (repeatingPattern == null) null else Pattern.compile(repeatingPattern)
-    val repeatingTokenCount = repeatingPattern?.count { c -> c == '~' } ?: 0
 }

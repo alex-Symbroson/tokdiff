@@ -83,6 +83,7 @@ fun main(args: Array<String>) {
                 if (writeDiffs) workbookWriter.writeDiffs(entryName, tokenChains, results)
             } catch (e: Exception) {
                 println("Failed to process diffs for input $entryName")
+                e.printStackTrace()
             }
 
             if (maxIdx != -1 && idx > maxIdx) break
