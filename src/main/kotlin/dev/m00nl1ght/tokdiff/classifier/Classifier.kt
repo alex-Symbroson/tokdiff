@@ -13,8 +13,8 @@ class Classifier {
         const val lenient = false
 
         private const val word = "[\\p{L}\\p{M}]+"
-        private const val wordnum = "[\\p{L}\\p{M}\\p{N}\\p{S}&&[^~]]+"
-        private const val any = "[\\p{L}\\p{M}\\p{N}\\p{S}\\p{Pd}\\p{Pc}\\p{Po}&&[^~]]+"
+        private const val wordnum = "[\\p{L}\\p{M}\\p{N}\\p{S}&&[^~\"]]+"
+        private const val any = "[\\p{L}\\p{M}\\p{N}\\p{S}\\p{Pd}\\p{Pc}\\p{Po}&&[^~\"]]+"
 
         fun root(): Category =
             Category("root",

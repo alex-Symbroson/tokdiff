@@ -1,6 +1,7 @@
 package dev.m00nl1ght.tokdiff
 
 import dev.m00nl1ght.tokdiff.classifier.Classifier
+import dev.m00nl1ght.tokdiff.classifier.ClassifierResult
 import dev.m00nl1ght.tokdiff.export.WorkbookWriter
 import java.io.File
 import java.nio.charset.StandardCharsets
@@ -17,6 +18,11 @@ fun main(args: Array<String>) {
 
     var workbookWriter = WorkbookWriter()
     var outputFileNumber = 0
+
+    val filter: (result: ClassifierResult) -> Boolean = when {
+        args.size > 3 -> { r -> r.category.name == args[3] }
+        else -> { _ -> true }
+    }
 
     try {
 
@@ -79,8 +85,10 @@ fun main(args: Array<String>) {
             try {
                 val diffChunks = calculateDiffs(tokenChains)
                 totalDiffs += diffChunks.size
-                val results = diffChunks.map { c -> Classifier.evaluate(tokenChains, c) } .flatten().toList()
-                if (writeDiffs) workbookWriter.writeDiffs(entryName, tokenChains, results)
+                val results = diffChunks
+                    .map { c -> Classifier.evaluate(tokenChains, c) }
+                    .flatten().filter(filter).toList()
+                if (writeDiffs && results.isNotEmpty()) workbookWriter.writeDiffs(entryName, tokenChains, results)
             } catch (e: Exception) {
                 println("Failed to process diffs for input $entryName")
                 e.printStackTrace()

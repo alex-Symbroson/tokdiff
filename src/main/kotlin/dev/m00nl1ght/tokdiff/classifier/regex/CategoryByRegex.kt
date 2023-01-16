@@ -89,7 +89,9 @@ class CategoryByRegex(name: String, vararg val behaviours: BehaviourByRegex) : C
         for (i in initiator.segments.indices) {
             for (c in chunks) {
                 if (c.value == Classifier.unidentified) continue
-                if (c.segments[i] != initiator.segments[i]) return null
+                if (c.segments[i] != initiator.segments[i]) {
+                    return null
+                }
             }
         }
 
