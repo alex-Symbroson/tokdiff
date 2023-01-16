@@ -15,6 +15,7 @@ fun main(args: Array<String>) {
 
     val tokFiles = ArrayList<ZipFile>()
     val inputFiles = ArrayList<ZipFile>()
+    val inputNames = LinkedHashSet<String>()
 
     var workbookWriter = WorkbookWriter()
     var outputFileNumber = 0
@@ -76,6 +77,7 @@ fun main(args: Array<String>) {
                         val tokens = parseTokens(text)
                         val name = zipFile.name.substringAfterLast(File.separatorChar).substringBeforeLast('.')
                         tokenChains.add(TokenChain(name, tokens, true))
+                        inputNames.add(name)
                     }
                 } catch (e: Exception) {
                     println("Failed to read entry $entryName from ${zipFile.name}")
@@ -112,8 +114,12 @@ fun main(args: Array<String>) {
         println("Finished processing all inputs, starting summary output file")
 
         workbookWriter = WorkbookWriter()
-        workbookWriter.makeSheet("Summary")
-        workbookWriter.writeSummary(totalDiffs)
+        workbookWriter.makeSheet("Categories")
+        workbookWriter.writeCategorySummary(totalDiffs)
+        workbookWriter.makeSheet("Behaviours")
+        workbookWriter.writeBehaviourSummary(inputNames)
+        workbookWriter.makeSheet("Scores")
+        workbookWriter.writeScoreSummary(inputNames)
         workbookWriter.saveWorkbook(baseDir, "summary", -1)
 
     } finally {

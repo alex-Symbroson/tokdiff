@@ -249,7 +249,12 @@ class Classifier {
                 }
             }
 
-            results.forEach { r -> r.category.occurences++ }
+            results.forEach { r ->
+                r.category.occurences++
+                r.chunks.forEach { c ->
+                    c.value.occurencesByInput.merge(c.input.name, 1, Int::plus)
+                }
+            }
             return results
         }
     }
