@@ -8,7 +8,7 @@ import dev.m00nl1ght.tokdiff.classifier.ClassifierResult
 import dev.m00nl1ght.tokdiff.classifier.ClassifierResult.Chunk
 import java.util.LinkedList
 
-class CategoryByRegex(name: String, vararg val behaviours: BehaviourByRegex) : Category(name) {
+class CategoryByRegex(name: String, val segCheck: Boolean, vararg val behaviours: BehaviourByRegex) : Category(name) {
 
     override fun evaluate(inputs: List<TokenChain>, diff: DiffChunk): ClassifierResult? {
 
@@ -49,6 +49,15 @@ class CategoryByRegex(name: String, vararg val behaviours: BehaviourByRegex) : C
                     }
                 }
 
+                if (b.endPattern != null) {
+                    val matcher = b.endPattern.matcher(combStr)
+                    matcher.region(combPos, combStr.length)
+                    if (!matcher.lookingAt())
+                        continue
+                    for (g in 1..matcher.groupCount()) segments.add(matcher.group(g))
+                    combPos = matcher.end()
+                }
+
                 val end = when (combPos) {
                     0 -> dBegin - 1
                     combStr.length -> dEnd
@@ -75,7 +84,7 @@ class CategoryByRegex(name: String, vararg val behaviours: BehaviourByRegex) : C
         for ((i, c) in chunks.withIndex()) {
             if (c.value is BehaviourByRegex) {
                 if (c.value.initiator) {
-                    if (c.segments.size != initiator.segments.size) return null
+                    if (segCheck && c.segments.size != initiator.segments.size) return null
                 } else {
                     if (c.segments.size < initiator.segments.size) return null
                     val limit = c.value.tokenLimit(initiator.segments.size)
@@ -89,7 +98,7 @@ class CategoryByRegex(name: String, vararg val behaviours: BehaviourByRegex) : C
         for (i in initiator.segments.indices) {
             for (c in chunks) {
                 if (c.value == Classifier.unidentified) continue
-                if (c.segments[i] != initiator.segments[i]) {
+                if (segCheck && c.segments[i] != initiator.segments[i]) {
                     return null
                 }
             }

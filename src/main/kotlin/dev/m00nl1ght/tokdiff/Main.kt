@@ -21,7 +21,7 @@ fun main(args: Array<String>) {
     var outputFileNumber = 0
 
     val filter: (result: ClassifierResult) -> Boolean = when {
-        args.size > 3 -> { r -> r.category.name == args[3] }
+        args.size > 3 -> { r -> r.category.name.startsWith(args[3]) }
         else -> { _ -> true }
     }
 
@@ -38,8 +38,7 @@ fun main(args: Array<String>) {
         }
 
         val entryNames = tokFiles
-            .flatMap { obj -> obj.entries().asSequence() }
-            .map { obj -> obj.name }
+            .flatMap { it.entries().asSequence().map { it.name } }
             .distinct().toList()
 
         var totalDiffs = 0
