@@ -8,7 +8,7 @@ import dev.m00nl1ght.tokdiff.classifier.ClassifierResult
 import dev.m00nl1ght.tokdiff.classifier.ClassifierResult.Chunk
 import java.util.LinkedList
 
-class CategoryByRegex(name: String, val segCheck: Boolean, vararg val behaviours: BehaviourByRegex) : Category(name) {
+class CategoryByRegex(name: String, vararg val behaviours: BehaviourByRegex, val segCheck: Boolean = true) : Category(name) {
 
     override fun evaluate(inputs: List<TokenChain>, diff: DiffChunk): ClassifierResult? {
 
@@ -52,8 +52,7 @@ class CategoryByRegex(name: String, val segCheck: Boolean, vararg val behaviours
                 if (b.endPattern != null) {
                     val matcher = b.endPattern.matcher(combStr)
                     matcher.region(combPos, combStr.length)
-                    if (!matcher.lookingAt())
-                        continue
+                    if (!matcher.lookingAt()) continue
                     for (g in 1..matcher.groupCount()) segments.add(matcher.group(g))
                     combPos = matcher.end()
                 }

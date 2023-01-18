@@ -21,7 +21,7 @@ class Classifier {
         fun root(): Category =
             Category("root",
                 Category("abbrev",
-                    CategoryByRegex("separated_abbrev", false,
+                    CategoryByRegex("separated_abbrev",
                         BehaviourByRegex("split_sep", 1f,
                             basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv*",
                             endPattern = "~-~$word"
@@ -49,9 +49,10 @@ class Classifier {
                         BehaviourByRegex("cursed", 1f,
                             basePattern = "$cabrv+~?[0-9\\p{Lu}]$cabrv*",
                             endPattern = "~?-~?$word"
-                        )
+                        ),
+                        segCheck = false
                     ),
-                    CategoryByRegex("abbrev", false,
+                    CategoryByRegex("abbrev",
                         BehaviourByRegex("split_trailing_artifact", -1f,
                             basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv*~-"
                         ),
@@ -70,10 +71,11 @@ class Classifier {
                         BehaviourByRegex("split", -1f,
                             basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv*"
                         ),
-                    ),
+                        segCheck = false
+                    )
                 ),
                 Category("separated_word",
-                    CategoryByRegex("separated_word_interpunct", true,
+                    CategoryByRegex("separated_word_interpunct",
                         BehaviourByRegex("kept", 1f,
                             basePattern = "($word)·($word)",
                             repeatingPattern = "·($word)",
@@ -83,7 +85,7 @@ class Classifier {
                             repeatingPattern = "~·~($word)",
                         )
                     ),
-                    CategoryByRegex("separated_word_hyphen", true,
+                    CategoryByRegex("separated_word_hyphen",
                         BehaviourByRegex("kept", 1f,
                             basePattern = "($wordnum)-($word)",
                             repeatingPattern = "-($word)",
@@ -99,7 +101,7 @@ class Classifier {
                             initiator = false
                         )
                     ),
-                    CategoryByRegex("separated_word_hyphen_open", true,
+                    CategoryByRegex("separated_word_hyphen_open",
                         BehaviourByRegex("kept", 1f,
                             basePattern = "($wordnum)-",
                             repeatingPattern = "($word)-",
@@ -111,7 +113,7 @@ class Classifier {
                     )
                 ),
                 Category("quoted",
-                    CategoryByRegex("quoted_word", true,
+                    CategoryByRegex("quoted_word",
                         BehaviourByRegex("separated", 1f,
                             basePattern = "\"~($any)~\""
                         ),
@@ -137,7 +139,7 @@ class Classifier {
                             endPattern = "~''"
                         )
                     ),
-                    CategoryByRegex("quoted_phrase_start", true,
+                    CategoryByRegex("quoted_phrase_start",
                         BehaviourByRegex("separated", 1f,
                             basePattern = "\"~($any)"
                         ),
@@ -148,7 +150,7 @@ class Classifier {
                             basePattern = "``~($any)"
                         )
                     ),
-                    CategoryByRegex("quoted_phrase_end", true,
+                    CategoryByRegex("quoted_phrase_end",
                         BehaviourByRegex("separated_split_trailing", 1f,
                             basePattern = "($any)~\"~,"
                         ),
@@ -179,7 +181,7 @@ class Classifier {
                     )
                 ),
                 Category("paranthesis",
-                    CategoryByRegex("parenthesized_word", true,
+                    CategoryByRegex("parenthesized_word",
                         BehaviourByRegex("separated", 1f,
                             basePattern = "\\(~($any)~\\)"
                         ),
@@ -187,7 +189,7 @@ class Classifier {
                             basePattern = "\\(($any)\\)"
                         )
                     ),
-                    CategoryByRegex("parenthesized_phrase_start", true,
+                    CategoryByRegex("parenthesized_phrase_start",
                         BehaviourByRegex("separated", 1f,
                             basePattern = "\\(~($any)"
                         ),
@@ -195,7 +197,7 @@ class Classifier {
                             basePattern = "\\(($any)"
                         )
                     ),
-                    CategoryByRegex("parenthesized_phrase_end", true,
+                    CategoryByRegex("parenthesized_phrase_end",
                         BehaviourByRegex("separated", 1f,
                             basePattern = "($any)~\\)"
                         ),
@@ -205,7 +207,7 @@ class Classifier {
                     )
                 ),
                 Category("date",
-                    CategoryByRegex("date_full", true,
+                    CategoryByRegex("date_full",
                         BehaviourByRegex("kept", 1f,
                             basePattern = "([0-9]{1,2})\\.([0-9]{1,2})\\.([0-9]{2,4})"
                         ),
@@ -219,7 +221,7 @@ class Classifier {
                             basePattern = "([0-9]{1,2})~\\.([0-9]{1,2})~\\.([0-9]{2,4})"
                         )
                     ),
-                    CategoryByRegex("date_partial", true,
+                    CategoryByRegex("date_partial",
                         BehaviourByRegex("kept", 1f,
                             basePattern = "([0-9]{1,2})\\.([0-9]{1,2})\\."
                         ),
@@ -235,7 +237,7 @@ class Classifier {
                     )
                 ),
                 Category("time",
-                    CategoryByRegex("time_full", true,
+                    CategoryByRegex("time_full",
                         BehaviourByRegex("kept", 1f,
                             basePattern = "([0-9]{1,2}):([0-9]{2})"
                         ),
@@ -251,7 +253,7 @@ class Classifier {
                     )
                 ),
                 Category("number",
-                    CategoryByRegex("number_separated", true,
+                    CategoryByRegex("number_separated",
                         BehaviourByRegex("kept_trailing_sep", 1f,
                             basePattern = "([0-9]{1,3}).([0-9]{3})",
                             repeatingPattern = ".([0-9]{3})",
@@ -281,7 +283,7 @@ class Classifier {
                             repeatingPattern = "~.~([0-9]{3})"
                         ),
                     ),
-                    CategoryByRegex("number_decimal_fraction", true,
+                    CategoryByRegex("number_decimal_fraction",
                         BehaviourByRegex("kept", 1f,
                             basePattern = "([0-9]+),([0-9]+)"
                         ),
@@ -289,7 +291,7 @@ class Classifier {
                             basePattern = "([0-9]+)~,~([0-9]+)"
                         )
                     ),
-                    CategoryByRegex("number_then_dot", true,
+                    CategoryByRegex("number_then_dot",
                         BehaviourByRegex("kept", 1f,
                             basePattern = "([0-9]+)."
                         ),
@@ -300,7 +302,7 @@ class Classifier {
                     )
                 ),
                 Category("artefact",
-                    CategoryByRegex("artefact", true,
+                    CategoryByRegex("artefact",
                         BehaviourByRegex("xml_like", -1f,
                             basePattern = "&#$any;"
                         ),

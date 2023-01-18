@@ -38,7 +38,8 @@ fun main(args: Array<String>) {
         }
 
         val entryNames = tokFiles
-            .flatMap { it.entries().asSequence().map { it.name } }
+            .flatMap { obj -> obj.entries().asSequence() }
+            .map { obj -> obj.name }
             .distinct().toList()
 
         var totalDiffs = 0
