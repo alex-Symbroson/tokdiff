@@ -88,7 +88,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
                 workbook.y++
             }
 
-            workbook.put(result.category.name, Subheader).x++
+            workbook.put(result.category.name.forDisplay, Subheader).x++
             workbook.cell(Subheader)
             workbook.x--
             workbook.y += 2
@@ -130,7 +130,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
 
         Classifier.root.forEachCategory { category, depth ->
             if (depth == 2) {
-                workbook.put(category.name).x++
+                workbook.put(category.name.forDisplay).x++
                 workbook.put(category.totalOccurences.toDouble(), decimalFormat = false)
                 workbook.resetX().y++
             }
@@ -181,7 +181,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
 
                 for (behaviour in category.behaviours) {
                     val count = behaviour.occurencesByInput.values.reduceOrNull(Int::plus) ?: 0
-                    workbook.put(behaviour.name).x++
+                    workbook.put(behaviour.name.forDisplay).x++
                     workbook.put(count.toDouble(), decimalFormat = false)
                     workbook.x += 2
 
@@ -216,7 +216,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
         Classifier.root.forEachCategory { category, _ ->
             if (category is CategoryByRegex) {
                 workbook.row(Subheader)
-                workbook.put(category.name, Subheader).x++
+                workbook.put(category.name.forDisplay, Subheader).x++
 
                 val countRef = CellReference("Behaviours", workbook.y, workbook.x, false, false).formatAsString()
                 workbook.x += 2
@@ -288,7 +288,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
             }
 
             makeChart(
-                "Scores for ${row.key.name}",
+                "Scores for ${row.key.name.forDisplay}",
                 CellRangeAddress(workbook.y, workbook.y + 20, workbook.x, workbook.x + 5),
                 CellRangeAddress(0, 0, dataStartX, dataStartX + inputNames.size - 1),
                 CellRangeAddress(row.value, row.value, dataStartX, dataStartX + inputNames.size - 1),
