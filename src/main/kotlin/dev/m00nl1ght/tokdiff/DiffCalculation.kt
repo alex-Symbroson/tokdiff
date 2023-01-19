@@ -3,10 +3,7 @@ package dev.m00nl1ght.tokdiff
 import dev.m00nl1ght.tokdiff.diff.MyersDiffAlgorithm
 import dev.m00nl1ght.tokdiff.diff.MyersDiffOperation
 
-class TokenChain(val name: String, val tokens: List<String>, val include: Boolean = true) {
-    val displayName: String
-        get() = name.replace("_", " ")
-}
+class TokenChain(val name: String, val tokens: List<String>, val include: Boolean = true)
 
 class DiffChunk(val begins: IntArray, val ends: IntArray)
 

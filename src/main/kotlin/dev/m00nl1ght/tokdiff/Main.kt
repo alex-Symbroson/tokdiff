@@ -25,6 +25,8 @@ fun main(args: Array<String>) {
         else -> { _ -> true }
     }
 
+    WorkbookWriter.formatDisplayNames = if (args.size > 4) args[4].toBoolean() else false
+
     try {
 
         baseDir.listFiles()?.forEach { file ->

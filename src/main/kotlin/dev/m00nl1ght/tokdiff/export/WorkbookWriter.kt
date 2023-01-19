@@ -17,6 +17,13 @@ import java.io.FileOutputStream
 
 class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) {
 
+    companion object {
+        var formatDisplayNames = false
+    }
+
+    val String.forDisplay: String
+        get() = if (formatDisplayNames) this.replace("_", " ") else this
+
     fun saveWorkbook(baseDir: File, baseName: String, number: Int) {
         val outputFile = File(baseDir, if (number >= 0) "$baseName-$number.xlsx" else "$baseName.xlsx")
         println("Saving workbook to: ${outputFile.absolutePath}")
@@ -49,7 +56,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
 
         for (tokenChain in inputs) {
             if (tokenChain.include) {
-                workbook.put(tokenChain.displayName, Header).y++
+                workbook.put(tokenChain.name.forDisplay, Header).y++
             }
         }
 
@@ -104,7 +111,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
                 workbook.cell().cellStyle = style
                 workbook.put(str).x++
                 workbook.cell().cellStyle = style
-                workbook.put("[" + chunk.value.displayName + "]").y++
+                workbook.put("[" + chunk.value.name.forDisplay + "]").y++
                 workbook.x--
             }
 
@@ -129,7 +136,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
             }
         }
 
-        workbook.put(Classifier.unknown.displayName).x++
+        workbook.put(Classifier.unknown.name.forDisplay).x++
         workbook.put(Classifier.unknown.totalOccurences.toDouble(), decimalFormat = false)
         workbook.resetX().mark().y++
 
@@ -159,7 +166,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
         workbook.width(16).x++
 
         for (inputName in inputNames) {
-            workbook.width(16).put(inputName.replace("_", " "), Header).x++
+            workbook.width(16).put(inputName.forDisplay, Header).x++
         }
 
         val xmax = workbook.x
@@ -168,7 +175,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
         Classifier.root.forEachCategory { category, _ ->
             if (category is CategoryByRegex) {
                 workbook.row(Subheader)
-                workbook.put(category.displayName, Subheader).x++
+                workbook.put(category.name.forDisplay, Subheader).x++
                 workbook.put(category.totalOccurences.toDouble(), Subheader, false).x++
                 workbook.resetX().y++
 
@@ -199,7 +206,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
 
         val dataStartX = workbook.x
         for (inputName in inputNames) {
-            workbook.width(16).put(inputName.replace("_", " "), Header).x++
+            workbook.width(16).put(inputName.forDisplay, Header).x++
         }
 
         workbook.resetX().y++
@@ -227,7 +234,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
                 workbook.resetX().y++
 
                 for (behaviour in category.behaviours) {
-                    workbook.put(behaviour.displayName).x++
+                    workbook.put(behaviour.name.forDisplay).x++
                     val scoreRef = workbook.cellref.formatAsString()
                     workbook.put(behaviour.score.toDouble())
                     workbook.x += 2

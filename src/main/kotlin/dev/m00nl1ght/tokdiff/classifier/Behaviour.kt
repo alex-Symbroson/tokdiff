@@ -4,6 +4,4 @@ open class Behaviour(val name: String, val score: Float) {
 
     var occurencesByInput: MutableMap<String, Int> = HashMap()
 
-    val displayName: String
-        get() = name.replace("_", " ")
 }
