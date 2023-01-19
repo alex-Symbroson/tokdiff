@@ -49,7 +49,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
 
         for (tokenChain in inputs) {
             if (tokenChain.include) {
-                workbook.put(tokenChain.name, Header).y++
+                workbook.put(tokenChain.displayName, Header).y++
             }
         }
 
@@ -104,7 +104,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
                 workbook.cell().cellStyle = style
                 workbook.put(str).x++
                 workbook.cell().cellStyle = style
-                workbook.put("[" + chunk.value.name + "]").y++
+                workbook.put("[" + chunk.value.displayName + "]").y++
                 workbook.x--
             }
 
@@ -129,7 +129,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
             }
         }
 
-        workbook.put(Classifier.unknown.name).x++
+        workbook.put(Classifier.unknown.displayName).x++
         workbook.put(Classifier.unknown.totalOccurences.toDouble(), decimalFormat = false)
         workbook.resetX().mark().y++
 
@@ -159,7 +159,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
         workbook.width(16).x++
 
         for (inputName in inputNames) {
-            workbook.width(16).put(inputName, Header).x++
+            workbook.width(16).put(inputName.replace("_", " "), Header).x++
         }
 
         val xmax = workbook.x
@@ -168,7 +168,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
         Classifier.root.forEachCategory { category, _ ->
             if (category is CategoryByRegex) {
                 workbook.row(Subheader)
-                workbook.put(category.name, Subheader).x++
+                workbook.put(category.displayName, Subheader).x++
                 workbook.put(category.totalOccurences.toDouble(), Subheader, false).x++
                 workbook.resetX().y++
 
@@ -199,7 +199,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
 
         val dataStartX = workbook.x
         for (inputName in inputNames) {
-            workbook.width(16).put(inputName, Header).x++
+            workbook.width(16).put(inputName.replace("_", " "), Header).x++
         }
 
         workbook.resetX().y++
@@ -227,7 +227,7 @@ class WorkbookWriter(val workbook: WorkbookRefs = WorkbookRefs(XSSFWorkbook())) 
                 workbook.resetX().y++
 
                 for (behaviour in category.behaviours) {
-                    workbook.put(behaviour.name).x++
+                    workbook.put(behaviour.displayName).x++
                     val scoreRef = workbook.cellref.formatAsString()
                     workbook.put(behaviour.score.toDouble())
                     workbook.x += 2

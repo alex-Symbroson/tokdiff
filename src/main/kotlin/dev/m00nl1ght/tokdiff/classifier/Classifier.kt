@@ -20,60 +20,6 @@ class Classifier {
 
         fun root(): Category =
             Category("root",
-                Category("abbrev",
-                    CategoryByRegex("separated_abbrev",
-                        BehaviourByRegex("split_sep", 1f,
-                            basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv*",
-                            endPattern = "~-~$word"
-                        ),
-                        BehaviourByRegex("split_sep", 1f,
-                            basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv*",
-                            endPattern = "-$word"
-                        ),
-                        BehaviourByRegex("split_sep_del", 1f,
-                            basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv{0,4}",
-                            endPattern = "~$word"
-                        ),
-                        BehaviourByRegex("kept", 1f,
-                            basePattern = "$cabrv+[0-9\\p{Lu}]$cabrv*",
-                            endPattern = "-$word"
-                        ),
-                        BehaviourByRegex("split", 1f,
-                            basePattern = "$cabrv+[0-9\\p{Lu}]$cabrv*",
-                            endPattern = "~-~$word"
-                        ),
-                        BehaviourByRegex("sep_del", 1f,
-                            basePattern = "$cabrv+[0-9\\p{Lu}]$cabrv*",
-                            endPattern = "~$word"
-                        ),
-                        BehaviourByRegex("cursed", 1f,
-                            basePattern = "$cabrv+~?[0-9\\p{Lu}]$cabrv*",
-                            endPattern = "~?-~?$word"
-                        ),
-                        segCheck = false
-                    ),
-                    CategoryByRegex("abbrev",
-                        BehaviourByRegex("split_trailing_artifact", -1f,
-                            basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv*~-"
-                        ),
-                        BehaviourByRegex("kept_trailing_artifact", -1f,
-                            basePattern = "$cabrv+[0-9\\p{Lu}]$cabrv*~-"
-                        ),
-                        BehaviourByRegex("kept_artifact", 1f,
-                            basePattern = "$cabrv+[0-9\\p{Lu}]$cabrv*-"
-                        ),
-                        BehaviourByRegex("split_artifact", -1f,
-                            basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv*-"
-                        ),
-                        BehaviourByRegex("kept", 1f,
-                            basePattern = "$cabrv+[0-9\\p{Lu}]$cabrv*"
-                        ),
-                        BehaviourByRegex("split", -1f,
-                            basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv*"
-                        ),
-                        segCheck = false
-                    )
-                ),
                 Category("separated_word",
                     CategoryByRegex("separated_word_interpunct",
                         BehaviourByRegex("kept", 1f,
@@ -203,6 +149,60 @@ class Classifier {
                         ),
                         BehaviourByRegex("dangling", -1f,
                             basePattern = "($any)\\)"
+                        )
+                    )
+                ),
+                Category("abbrev",
+                    CategoryByRegex("separated_abbrev",
+                        BehaviourByRegex("split_sep", 1f,
+                            basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv*",
+                            endPattern = "~-~$word"
+                        ),
+                        BehaviourByRegex("split_sep", 1f,
+                            basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv*",
+                            endPattern = "-$word"
+                        ),
+                        BehaviourByRegex("split_sep_del", 1f,
+                            basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv{0,4}",
+                            endPattern = "~$word"
+                        ),
+                        BehaviourByRegex("kept", 1f,
+                            basePattern = "$cabrv+[0-9\\p{Lu}]$cabrv*",
+                            endPattern = "-$word"
+                        ),
+                        BehaviourByRegex("split", 1f,
+                            basePattern = "$cabrv+[0-9\\p{Lu}]$cabrv*",
+                            endPattern = "~-~$word",
+                            initiator = false
+                        ),
+                        BehaviourByRegex("sep_del", 1f,
+                            basePattern = "$cabrv+[0-9\\p{Lu}]$cabrv*",
+                            endPattern = "~$word"
+                        ),
+                        BehaviourByRegex("cursed", 1f,
+                            basePattern = "$cabrv+~?[0-9\\p{Lu}]$cabrv*",
+                            endPattern = "~?-~?$word"
+                        )
+                    ),
+                    CategoryByRegex("abbrev",
+                        BehaviourByRegex("split_trailing_artifact", -1f,
+                            basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv*~-"
+                        ),
+                        BehaviourByRegex("kept_trailing_artifact", -1f,
+                            basePattern = "$cabrv+[0-9\\p{Lu}]$cabrv*~-"
+                        ),
+                        BehaviourByRegex("kept_artifact", 1f,
+                            basePattern = "$cabrv+[0-9\\p{Lu}]$cabrv*-"
+                        ),
+                        BehaviourByRegex("split_artifact", -1f,
+                            basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv*-"
+                        ),
+                        BehaviourByRegex("kept", 1f,
+                            basePattern = "$cabrv+[0-9\\p{Lu}]$cabrv*"
+                        ),
+                        BehaviourByRegex("split", -1f,
+                            basePattern = "$cabrv+~[0-9\\p{Lu}]$cabrv*",
+                            initiator = false
                         )
                     )
                 ),

@@ -5,6 +5,8 @@ import dev.m00nl1ght.tokdiff.TokenChain
 
 open class Category(val name: String, open vararg val sub: Category) {
 
+    val displayName: String
+        get() = name.replace("_", " ")
     var occurences = 0
 
     val totalOccurences: Int
